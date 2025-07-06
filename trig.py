@@ -21,8 +21,8 @@ def get_nearest_sprite(source_sprite, group):
     min_dist = float('inf')
     sx, sy = source_sprite.rect.center
     for sprite in group:
-        dx = sprite.rect.centerx - sx
-        dy = sprite.rect.centery - sy
+        dx = sprite.rect.centerx
+        dy = sprite.rect.centery
         dist = distance((sx,sy), (dx,dy))
         if dist < min_dist:
             min_dist = dist
