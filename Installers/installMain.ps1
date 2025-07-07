@@ -12,7 +12,7 @@ $name = "Pygame $build"
 pyinstaller --onefile main.py -w -i "Assets/icon.ico" --name=$name
 
 # Copy the executable to the Game directory
-Copy-Item -Path .\dist\Pygame.exe -Destination .\Game -Force
+Copy-Item -Path .\dist\Pygame $build.exe -Destination .\Game -Force
 
 # Copy the entire Assets directory to Game
 Copy-Item -Path .\Assets -Destination .\Game -Recurse -Force
