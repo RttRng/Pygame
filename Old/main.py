@@ -13,7 +13,7 @@ class Engine:
             obj.tick()
     def draw(self):
         for obj in self.draw_subs:
-            obj.render(screen)
+            obj.update(screen)
 
     def mouse_event(self):
         d_mouse = (g.mouse.get_pressed()[0]!=self.mouse_state[0],g.mouse.get_pressed()[1]!=self.mouse_state[1],g.mouse.get_pressed()[2]!=self.mouse_state[2])

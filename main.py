@@ -5,6 +5,9 @@ import networking as n
 import pygameLib as l
 import events as e
 import sound as sfx
+
+
+
 class Network:
     def __bool__(self):
         return True
@@ -102,6 +105,11 @@ if __name__ == "__main__":
 
         spawn = False
         reset = False
+        text1 = l.Text(screen,"msg1",(10,10))
+        text2 = l.Text(screen,"msg2",(10,30))
+        text3 = l.Text(screen,"msg3",(10,50))
+        text4 = l.Text(screen,"msg4",(10,70))
+        fp = 60
 
     ########################################################################################################################
         while running:
@@ -115,6 +123,10 @@ if __name__ == "__main__":
                         spawn = not spawn
                     if event.key == p.K_r:
                         reset = True
+                    if event.key == p.K_s:
+                        fp -= 5
+                    if event.key == p.K_w:
+                        fp += 5
 
             if reset:
                 for i in l.gAll.sprites():
@@ -126,13 +138,13 @@ if __name__ == "__main__":
             mouse.update()
 
             if l.master:
-                if r.randint(1,20)==20:
+                if r.randint(1,int(round(clock.get_fps(), 0))+1)==1:
                     if spawn:
                         spawnx,spawny = trig.speeddeg_xy(500+r.randint(0,200),r.randint(0,360))
                         l.Enemy(400+spawnx,  300+spawny)
 
-                e.check_collisions_group(l.gPlayerProjectiles,l.gEnemies,sfx.hit)
-                e.check_collisions_group(l.gPlayer,l.gEnemies,sfx.hit)
+                e.check_collisions_group(l.gPlayerProjectiles,l.gEnemies,e.kill,e.onHit)
+                e.check_collisions_group(l.gPlayer,l.gEnemies,e.onHit,e.kill)
             l.gAll.update()
             l.gAll.draw(screen)
             if net:
@@ -167,22 +179,19 @@ if __name__ == "__main__":
 
             ipText = "None"
             msg3 = "Spawning: " + str(spawn)
-
-            text1 = font.render(msg1, True, (255, 255, 255))  # White text
-            text1_rect = text1.get_rect(x=10, y=10)
-            text2 = font.render(msg2, True, (255, 255, 255))
-            text2_rect = text2.get_rect(x=10, y=30)
-            text3 = font.render(msg3, True, (255, 255, 255))
-            text3_rect = text3.get_rect(x=10, y=50)
-            screen.blit(text1, text1_rect)  # Draw text
-            screen.blit(text2, text2_rect)
-            screen.blit(text3, text3_rect)
+            msg4 = "HP: " + str(player.hp)
+            text1(msg1)
+            text2(msg2)
+            text3(msg3)
+            text4(msg4)
+            l.gText.update()
 
 
 
-
-            clock.tick(30)
+            clock.tick(fp)
+            fps = round(clock.get_fps(), 1)
+            l.delta_time = 30 / (fps+0.0001)
             p.display.set_caption(
-                "FPS: " + str(round(clock.get_fps(), 1))
+                "FPS: " + str(fps)
             )
             p.display.flip()

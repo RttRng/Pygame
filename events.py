@@ -3,13 +3,20 @@ import trig
 import sound as sfx
 import pygameLib as l
 events = {"Player2Died":False}
-def check_collisions_group(groupA,groupB,onHit=None):
-    collisions = p.sprite.groupcollide(groupA, groupB, True, True)
-    for A in collisions.items():
-        for B in A:
-            print(f"A: {A}, B: {B}")
-            if onHit is not None:
-                onHit()
+
+def check_collisions_group(groupA, groupB, onHitA=None, onHitB=None):
+    collisions = p.sprite.groupcollide(groupA, groupB, False, False)
+
+    for spriteA, collidedBs in collisions.items():
+        for spriteB in collidedBs:
+            print(f"A: {spriteA}, B: {spriteB}")
+
+            if onHitA is not None:
+                onHitA(spriteA)
+
+            if onHitB is not None:
+                onHitB(spriteB)
+
 
 def projectile(playerxy, angle ,master=True):
     sfx.shoot()
@@ -36,3 +43,11 @@ def move_sprites(have,want):
     wantCount = len(want)
     for i in range(wantCount):
         have[i].x, have[i].y = want[i]
+
+def onHit(sprite):
+    sprite.hit(1)
+    sfx.hit()
+def onHitSilent(sprite):
+    sprite.hit(1)
+def kill(sprite):
+    sprite.kill()
