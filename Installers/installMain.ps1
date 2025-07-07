@@ -11,6 +11,8 @@ $name = "Pygame $build"
 # Package the game
 pyinstaller --onefile main.py -w -i "Assets/icon.ico" --name=$name
 
+Remove-Item -Path ".\Game\*" -Recurse -Force
+
 # Copy the executable to the Game directory
 Copy-Item -Path .\dist\Pygame $build.exe -Destination .\Game -Force
 
