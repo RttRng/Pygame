@@ -1,7 +1,15 @@
 cd 'C:/Users/mouli/Desktop/Pygame'
+$var = Get-Content "counter.txt"
+$build = Read-Host "Predchozi commit: $var, napis novy: "
+
+
+$build | Set-Content "counter.txt"
+Write-Output $build
+$name = "Pygame $build"
+
 
 # Package the game
-pyinstaller --onefile main.py -w -i "Assets/icon.ico" --name=Pygame
+pyinstaller --onefile main.py -w -i "Assets/icon.ico" --name=$name
 
 # Copy the executable to the Game directory
 Copy-Item -Path .\dist\Pygame.exe -Destination .\Game -Force
@@ -19,13 +27,8 @@ echo "Finished, Pushing to git"
 
 
 
-# Načti hodnotu
-$var = Get-Content "counter.txt"
-$build = Read-Host "Predchozi commit: $var, napis novy: "
 
 
-$build | Set-Content "counter.txt"
-Write-Output $build
 
 git commit -a -m $build
 git push

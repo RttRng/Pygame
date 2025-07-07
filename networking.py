@@ -1,139 +1,169 @@
-import socket
-import threading
+import socket as s
+import threading as t
 import json
 import time
 
-class Host:
-    def __init__(self, port, message_callback):
-        self.port = port
-        self.message_callback = message_callback
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
-        self.running = False
-        self.buffer_size = 16384  # Zvětšený buffer
+def validate_data_size(data, max_size_mb=10):
+    """
+    Kontroluje velikost dat před odesláním
+    :param data: Data k odeslání
+    :param max_size_mb: Maximální povolená velikost v MB
+    :return: True pokud jsou data v pořádku, False pokud jsou příliš velká
+    """
+    try:
+        json_size = len(json.dumps(data).encode('utf-8'))
+        return json_size <= (max_size_mb * 1024 * 1024)
+    except Exception:
+        return False
 
-    def start(self):
-        try:
-            self.socket.bind(('', self.port))
-            self.socket.listen(1)
-            hostname = socket.gethostname()
-            self.local_ip = socket.gethostbyname(hostname)
-            print(f"Host čeká na připojení na IP adrese {self.local_ip}, port {self.port}")
+def validate_data_structure(data):
+    """
+    Kontroluje strukturu dat před odesláním
+    :param data: Data k ověření
+    :return: True pokud mají data správnou strukturu, False pokud ne
+    """
+    try:
+        json.dumps(data)
+        if isinstance(data, dict):
+            allowed_keys = {"Player", "Enemies", "Projectiles", "Sound_events", "Shooting","Events"}
+            if not all(key in allowed_keys for key in data.keys()):
+                return False
 
-            self.client_socket, self.client_address = self.socket.accept()
-            self.client_socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
-            print(f"Klient připojen z adresy {self.client_address}")
+            if "Player" in data and data["Player"] is not None:
+                if not isinstance(data["Player"], tuple) or len(data["Player"]) != 2:
+                    return False
 
-            self.running = True
-            self.receive_thread = threading.Thread(target=self._receive_loop)
-            self.receive_thread.daemon = True
-            self.receive_thread.start()
+            if "Sound_events" in data and not isinstance(data["Sound_events"], dict):
+                return False
+
             return True
+    except (TypeError, json.JSONDecodeError):
+        return False
+    return True
+
+class NetworkManager:
+    """
+    Univerzální třída pro síťovou komunikaci, může fungovat jako host nebo klient
+    """
+    def __init__(self, message_callback, is_host=False):
+        """
+        Inicializace síťového manageru
+        :param message_callback: Callback funkce pro zpracování přijatých zpráv
+        :param is_host: True pro hostitele, False pro klienta
+        """
+        self.message_callback = message_callback
+        self.is_host = is_host
+        self.socket = s.socket(s.AF_INET, s.SOCK_STREAM)
+        self.socket.setsockopt(s.IPPROTO_TCP, s.TCP_NODELAY, 1)
+        if self.is_host:
+            self.socket.setsockopt(s.SOL_SOCKET, s.SO_REUSEADDR, 1)
+        self.running = False
+        self.buffer_size = 16384
+        self.connection_socket = None  # Socket pro aktivní spojení
+
+    def start(self, port, ip=''):
+        """
+        Spustí síťové spojení
+        :param port: Port pro připojení/naslouchání
+        :param ip: IP adresa pro připojení (ignorováno pro hostitele)
+        :return: True pokud bylo spojení úspěšné, False pokud ne
+        """
+        try:
+            if self.is_host:
+                return self._start_host(port)
+            else:
+                return self._start_client(ip, port)
         except Exception as e:
-            print(f"Chyba při spuštění serveru: {e}")
+            print(f"Chyba při {'spuštění serveru' if self.is_host else 'připojování'}: {e}")
             return False
 
+    def _start_host(self, port):
+        """Spustí server jako hostitel"""
+        self.socket.bind(('', port))
+        self.socket.listen(1)
+        hostname = s.gethostname()
+        self.local_ip = s.gethostbyname(hostname)
+        print(f"Host čeká na připojení na IP adrese {self.local_ip}, port {port}")
+
+        self.connection_socket, self.client_address = self.socket.accept()
+        self.connection_socket.setsockopt(s.IPPROTO_TCP, s.TCP_NODELAY, 1)
+        print(f"Klient připojen z adresy {self.client_address}")
+
+        self._start_receiving()
+        return True
+
+    def _start_client(self, host_ip, port):
+        """Připojí se k serveru jako klient"""
+        print(f"Připojování k hostu {host_ip} na portu {port}...")
+        self.socket.connect((host_ip, port))
+        self.connection_socket = self.socket
+        print("Úspěšně připojeno k hostu!")
+
+        self._start_receiving()
+        return True
+
+    def _start_receiving(self):
+        """Spustí přijímací smyčku ve vlastním vlákně"""
+        self.running = True
+        self.receive_thread = t.Thread(target=self._receive_loop)
+        self.receive_thread.daemon = True
+        self.receive_thread.start()
+
     def _receive_loop(self):
+        """Smyčka pro přijímání zpráv"""
         incomplete_data = ""
         while self.running:
             try:
-                data = self.client_socket.recv(self.buffer_size).decode('utf-8')
+                data = self.connection_socket.recv(self.buffer_size).decode('utf-8')
                 if not data:
                     break
-                
+
                 incomplete_data += data
                 try:
                     message = json.loads(incomplete_data)
                     self.message_callback(message)
                     incomplete_data = ""
                 except json.JSONDecodeError:
-                    continue  # Počkáme na další data
-                
+                    continue
+
             except Exception as e:
                 print(f"Chyba příjmu: {e}")
-                time.sleep(0.1)  # Přidáme malé zpoždění při chybě
+                time.sleep(0.1)
                 continue
         self.stop()
 
     def send(self, data):
-        if self.running:
-            try:
-                message = json.dumps(data)
-                self.client_socket.sendall(message.encode('utf-8'))
-                return True
-            except Exception as e:
-                print(f"Chyba odesílání: {e}")
-                return False
-        return False
-
-    def stop(self):
-        self.running = False
-        try:
-            self.client_socket.close()
-            self.socket.close()
-        except:
-            pass
-
-class Client:
-    def __init__(self, message_callback):
-        self.message_callback = message_callback
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
-        self.running = False
-        self.buffer_size = 16384  # Zvětšený buffer
-
-    def connect(self, host_ip, port):
-        try:
-            print(f"Připojování k hostu {host_ip} na portu {port}...")
-            self.socket.connect((host_ip, port))
-            print("Úspěšně připojeno k hostu!")
-
-            self.running = True
-            self.receive_thread = threading.Thread(target=self._receive_loop)
-            self.receive_thread.daemon = True
-            self.receive_thread.start()
-            return True
-        except Exception as e:
-            print(f"Chyba při připojování: {e}")
+        """
+        Bezpečné odeslání dat
+        :param data: Data k odeslání
+        :return: True pokud bylo odeslání úspěšné, False pokud ne
+        """
+        if not self.running or not self.connection_socket:
             return False
 
-    def _receive_loop(self):
-        incomplete_data = ""
-        while self.running:
-            try:
-                data = self.socket.recv(self.buffer_size).decode('utf-8')
-                if not data:
-                    break
-                
-                incomplete_data += data
-                try:
-                    message = json.loads(incomplete_data)
-                    self.message_callback(message)
-                    incomplete_data = ""
-                except json.JSONDecodeError:
-                    continue  # Počkáme na další data
-                    
-            except Exception as e:
-                print(f"Chyba příjmu: {e}")
-                time.sleep(0.1)  # Přidáme malé zpoždění při chybě
-                continue
-        self.stop()
+        if not validate_data_structure(data):
+            print("Chyba: Neplatná struktura dat")
+            return False
 
-    def send(self, data):
-        if self.running:
-            try:
-                message = json.dumps(data)
-                self.socket.sendall(message.encode('utf-8'))
-                return True
-            except Exception as e:
-                print(f"Chyba odesílání: {e}")
-                return False
-        return False
+        if not validate_data_size(data):
+            print("Chyba: Data jsou příliš velká")
+            return False
+
+        try:
+            message = json.dumps(data)
+            self.connection_socket.sendall(message.encode('utf-8'))
+            return True
+        except Exception as e:
+            print(f"Chyba odesílání: {e}")
+            return False
 
     def stop(self):
+        """Ukončí síťové spojení"""
         self.running = False
         try:
-            self.socket.close()
+            if self.connection_socket:
+                self.connection_socket.close()
+            if self.is_host:
+                self.socket.close()
         except:
             pass
