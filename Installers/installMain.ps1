@@ -15,24 +15,22 @@ Compress-Archive -Path .\Game\* -DestinationPath .\Game.zip -Force
 Move-Item -Path .\Game.zip -Destination .\dist -Force
 
 echo "Finished, Pushing to git"
-$a = 0  # 1.0.0 by bylo vydání
-$b = 1  # 0.2.0 update s velkým přepsáním kódu
-#$c       0.0.1 push na git
+
+
+
+$build =  "0.1.6"
 # Načti hodnotu
 if (Test-Path "counter.txt") {
-    $c = Get-Content "counter.txt"
-} else {
-    $c = 4
+    $var = Get-Content "counter.txt"
+      if ($var==$build) {
+        $var = Read-Host "Shoda s předchozím commitem ($build), napiš nový: "
+      }
 }
+else {
+    $var = $build
+}
+$var | Set-Content "counter.txt"
+Write-Output $var
 
-# Inkrementuj
-$c++
-
-# Ulož zpět
-$c | Set-Content "counter.txt"
-
-$build =  "$a.$b.$c"
-Write-Output $build
-
-git commit -a -m $build
+git commit -a -m $var
 git push
