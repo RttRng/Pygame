@@ -18,19 +18,14 @@ echo "Finished, Pushing to git"
 
 
 
-$build =  "0.1.6"
-# Načti hodnotu
-if (Test-Path "counter.txt") {
-    $var = Get-Content "counter.txt"
-      if ($var==$build) {
-        $var = Read-Host "Shoda s předchozím commitem ($build), napiš nový: "
-      }
-}
-else {
-    $var = "$build"
-}
-$var | Set-Content "counter.txt"
-Write-Output $var
 
-git commit -a -m $var
+# Načti hodnotu
+$var = Get-Content "counter.txt"
+$build = Read-Host "Predchozi commit: $var, napis novy: "
+
+
+$build | Set-Content "counter.txt"
+Write-Output $build
+
+git commit -a -m $build
 git push
