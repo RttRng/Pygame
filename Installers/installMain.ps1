@@ -27,7 +27,7 @@ if (Test-Path "counter.txt") {
       }
 }
 else {
-    $var = $build
+    $var = "$build"
 }
 $var | Set-Content "counter.txt"
 Write-Output $var
