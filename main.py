@@ -111,7 +111,7 @@ if __name__ == "__main__":
         spawn = False
         reset = False
         text1 = Text(screen,"msg1",(10,10))
-        text2 = Text(screen,"msg2",(10,30))
+        text2 = 0Text(screen,"msg2",(10,30))
         text3 = Text(screen,"msg3",(10,50))
         text4 = Text(screen,"msg4",(10,70))
         info = p.display.Info()
