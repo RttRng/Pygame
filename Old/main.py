@@ -80,7 +80,7 @@ class Constructor:
         new_object.direction = m.degrees(m.atan2(destination[1]-source[1],destination[0]-source[0]))
         new_object.speed = 10
         new_object.color = "white"
-        new_object.size = 12
+        new_object.SIZE = 12
 
 class Enemy(Physics,Hp):
     def __init__(self,engine,target):

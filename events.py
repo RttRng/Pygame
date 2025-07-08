@@ -2,7 +2,7 @@ import pygame as p
 import trig
 import sound as sfx
 import pygameLib as l
-events = {"Player2Died":False}
+events = {"Player2Died":[False],"Shooting":[False,0]}
 
 def check_collisions_group(groupA, groupB, onHitA=None, onHitB=None):
     collisions = p.sprite.groupcollide(groupA, groupB, False, False)
@@ -42,7 +42,7 @@ def correct_sprites(have,want, spawn):
 def move_sprites(have,want):
     wantCount = len(want)
     for i in range(wantCount):
-        have[i].x, have[i].y = want[i]
+        have[i].rect.center = want[i]
 
 def onHit(sprite):
     sprite.hit(1)
