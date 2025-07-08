@@ -10,12 +10,12 @@ import threading
 from pygameUtils import delta_time as new_delta_time
 host = None
 client = None
-def initialize_network(isHost=True):
+def initialize_network(ip,port,isHost=True):
     global host, client
     if isHost:
-        host = Host(12345, callback_host)
+        host = Host(port, callback_host)
     else:
-        client = Client("192.168.0.150", 12345, callback_client)
+        client = Client(ip, port, callback_client)
 
 
 def recieve_update(type,data):
@@ -191,12 +191,12 @@ if __name__ == "__main__":
                     net = True
                     player2 = Player2(400, 300)
                     if keys[p.K_h]:
-                        initialize_network(isHost=True)
+                        initialize_network(isHost=True,ip=IP,port=PORT)
                         msg1 = "Hosting"
                         msg2 = "Sex?"
 
                     elif keys[p.K_c]:
-                        initialize_network(isHost=False)
+                        initialize_network(isHost=False,ip=IP,port=PORT)
                         master = False
                         msg1 = "Connected"
                         msg2 = IP + ":" + str(PORT)
