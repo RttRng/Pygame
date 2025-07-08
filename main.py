@@ -99,8 +99,8 @@ if __name__ == "__main__":
         player = Player(400,300)
         FONT = p.font.SysFont("Arial", 18)
         PORT = 42069
-        # IP = "25.21.131.22"
-        IP = "192.168.0.150"
+        IP = "25.21.131.22"
+        #IP = "192.168.0.150"
         fp = 60
         net = False
 
@@ -111,7 +111,7 @@ if __name__ == "__main__":
         spawn = False
         reset = False
         text1 = Text(screen,"msg1",(10,10))
-        text2 = 0Text(screen,"msg2",(10,30))
+        text2 = Text(screen,"msg2",(10,30))
         text3 = Text(screen,"msg3",(10,50))
         text4 = Text(screen,"msg4",(10,70))
         info = p.display.Info()
