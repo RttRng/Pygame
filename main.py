@@ -3,6 +3,7 @@ import pygame as p
 import random as r
 from networking import *
 from pygameLib import *
+import pygameLib as l
 import events as e
 import sound as sfx
 import threading
@@ -21,7 +22,7 @@ def recieve_update(type,data):
     print(f"[CALLBACK] Type: {type} Data: {data}")
 
     ev = data["Events"]
-    if ev["Player2Died"][0]:
+    if ev["Player2Died"]:
         player2.kill()
 
 
@@ -42,8 +43,8 @@ def callback_host(type,data):
     if type == "UPDATE":
         recieve_update(type,data)
         ev = data["Events"]
-        if ev["Shooting"][0]:
-            e.projectile(player2.rect.center, ev["Shooting"][1])
+        if ev["Shooting"]:
+            e.projectile(player2.rect.center, ev["ShootingDir"])
     else:
         print(f"[CALLBACK] Type: {type}")
 def callback_client(type,data):
@@ -78,31 +79,29 @@ def send(isHost=True):
     except:
         pass
 def reset_events():
-    shooting = (False, 0)
-    for i in sound_events.keys():
-        sound_events[i] = False
-    for i in e.events.keys():
-        e.events[i][0] = False
+    sfx.reset()
+    e.reset()
 
 
-SIZE = (800, 600)
-BOUNDS = (-50, -50, SIZE[0] + 50, SIZE[1] + 50)
-WRAP_BOUNDS = (0, 0, SIZE[0], SIZE[1])
+screen_size = (1920, 1080)
+SIZE = screen_size
+bounds = (-50, -50, screen_size[0] + 50, screen_size[1] + 50)
+warp_bounds = (0, 0, screen_size[0], screen_size[1])
 delta_time = 1
 
 if __name__ == "__main__":
     running = True
     while running:
-
+        fullscreen = True
         p.init()
-        screen = p.display.set_mode(SIZE)
+        screen = p.display.set_mode(screen_size, p.FULLSCREEN)
         clock = p.time.Clock()
         player = Player(400,300)
         FONT = p.font.SysFont("Arial", 18)
         PORT = 42069
         # IP = "25.21.131.22"
         IP = "192.168.0.150"
-
+        fp = 60
         net = False
 
 
@@ -115,8 +114,15 @@ if __name__ == "__main__":
         text2 = Text(screen,"msg2",(10,30))
         text3 = Text(screen,"msg3",(10,50))
         text4 = Text(screen,"msg4",(10,70))
-        fp = 60
-
+        info = p.display.Info()
+        screen_width = info.current_w
+        screen_height = info.current_h
+        screen_size = screen_width, screen_height
+        bounds = (-50, -50, screen_size[0] + 50, screen_size[1] + 50)
+        warp_bounds = (0, 0, screen_size[0], screen_size[1])
+        l.screen_size = screen_size
+        l.bounds = bounds
+        l.warp_bounds = warp_bounds
     ########################################################################################################################
         while running:
             for event in p.event.get():
@@ -133,6 +139,22 @@ if __name__ == "__main__":
                         fp -= 5
                     if event.key == p.K_w:
                         fp += 5
+                    if event.key == p.K_F11:
+                        fullscreen = not fullscreen
+                        if fullscreen:
+                            screen = p.display.set_mode(screen_size, p.FULLSCREEN)
+                            info = p.display.Info()
+                            screen_width = info.current_w
+                            screen_height = info.current_h
+                            screen_size = screen_width, screen_height
+                        else:
+                            screen = p.display.set_mode(SIZE)
+
+                        bounds = (-50, -50, screen_size[0] + 50, screen_size[1] + 50)
+                        warp_bounds = (0, 0, screen_size[0], screen_size[1])
+                        l.screen_size = screen_size
+                        l.bounds = bounds
+                        l.warp_bounds = warp_bounds
 
             if reset:
                 for i in gAll.sprites():
@@ -148,8 +170,8 @@ if __name__ == "__main__":
             if master:
                 if r.randint(1,int(round(clock.get_fps(), 0))+1)==1:
                     if spawn:
-                        spawnx,spawny = trig.speeddeg_xy(500+r.randint(0,200),r.randint(0,360))
-                        Enemy(400+spawnx,  300+spawny)
+                        spawnx,spawny = trig.speeddeg_xy(screen_size[0] / 2 + screen_size[1] / 2 + r.randint(0, 200), r.randint(0, 360))
+                        Enemy(screen_size[0] / 2 + spawnx, screen_size[1] / 2 + spawny)
 
                 e.check_collisions_group(gPlayerProjectiles,gEnemies,e.kill,e.onHit)
                 e.check_collisions_group(gPlayer,gEnemies,e.onHit,e.kill)
@@ -184,6 +206,7 @@ if __name__ == "__main__":
 
 
             ipText = "None"
+            msg2 = str(delta_time)
             msg3 = "Spawning: " + str(spawn)
             msg4 = "HP: " + str(player.hp)
             text1(msg1)
@@ -193,7 +216,7 @@ if __name__ == "__main__":
             gText.update()
 
 
-
+            l.master = master
             clock.tick(fp)
             fps = round(clock.get_fps(), 1)
             delta_time = 30 / (fps+0.0001)
@@ -206,7 +229,6 @@ if __name__ == "__main__":
                 if thread != threading.current_thread() and thread != threading.main_thread():
                     thread.join()
             host.send("DISCONNECT")
-            master = True
         except:
             pass
         try:
@@ -214,6 +236,5 @@ if __name__ == "__main__":
                 if thread != threading.current_thread() and thread != threading.main_thread():
                     thread.join()
             client.send("DISCONNECT")
-            master = True
         except:
             pass

@@ -2,7 +2,10 @@ import pygame as p
 import trig
 import sound as sfx
 import pygameLib as l
-events = {"Player2Died":[False],"Shooting":[False,0]}
+events = {"Player2Died":False,"Shooting":False,"ShootingDir":0}
+def reset():
+    global events
+    events.update({"Player2Died": False, "Shooting": False})
 
 def check_collisions_group(groupA, groupB, onHitA=None, onHitB=None):
     collisions = p.sprite.groupcollide(groupA, groupB, False, False)
@@ -20,10 +23,12 @@ def check_collisions_group(groupA, groupB, onHitA=None, onHitB=None):
 
 def projectile(playerxy, angle ,master=True):
     sfx.shoot()
+    global events
     if master:
-        return l.Projectile(playerxy[0], playerxy[1], angle)
+        l.Projectile(playerxy[0], playerxy[1], angle)
     else:
-        return True, angle
+        print("SEEEEEEEEEEEEEEEEEEEEEEEEEEEX")
+        events["Shooting"],events["ShootingDir"] = True, int(angle)
 def correct_sprites(have,want, spawn):
     haveCount = len(have)
     

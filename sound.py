@@ -2,8 +2,9 @@ import pygame as p
 import os
 import random as r
 
-
-
+def reset():
+    global sound_events
+    sound_events = {"shoot": False,"hit": False}
 class Sound:
     def __init__(self,name):
         self.path = "Assets/Sfx"

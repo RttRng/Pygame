@@ -17,7 +17,7 @@ class Text(p.sprite.Sprite):
         self.text = self.font.render(self.msg, self.antialias, self.color)
         self.text_rect = self.text.get_rect(x=self.x, y=self.y)
     def __call__(self, msg):
-        self.msg = msg
+        self.msg = str(msg)
         self.text = self.font.render(self.msg, self.antialias, self.color)
         self.text_rect = self.text.get_rect(x=self.x, y=self.y)
     def update(self):
@@ -69,13 +69,18 @@ class Object(p.sprite.Sprite):
     def add_speed(self):
         direction = self.direction
         acceleration = self.acceleration
-        dx, dy = trig.speeddeg_xy(acceleration - trig.current_speed(self) / 10, direction)
+        dx, dy = trig.speeddeg_xy(acceleration - trig.current_speed(self) / 30, direction)
         self.dx += dx * self.delta_time
         self.dy += dy * self.delta_time
 
     def friction(self):
         self.dx -= self.dx * self.friction_coef * self.delta_time
         self.dy -= self.dy * self.friction_coef * self.delta_time
+        if abs(self.dx) < self.friction_coef:
+            self.dx = 0
+        if abs(self.dy) < self.friction_coef:
+            self.dy = 0
+
 
     def hit(self,dmg):
         self.hp -= dmg
