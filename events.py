@@ -2,10 +2,10 @@ import pygame as p
 import trig
 import sound as sfx
 import pygameLib as l
-events = {"Player2Died":False,"Shooting":False,"ShootingData":[]}
+events = {"Player2Died":[False,False],"Shooting":False,"ShootingData":[]}
 def reset():
     global events
-    events.update({"Player2Died": False, "Shooting": False,"ShootingData":[]})
+    events.update({"Player2Died": [False,False], "Shooting": False,"ShootingData":[]})
 
 def projectile(playerxy, angle, dmg ,master=True):
     global events
@@ -37,7 +37,6 @@ def move_sprites(have,want):
         if len(want[i]) > 2:
             extra = want[i][2]
             if extra is not None:
-                print(extra)
                 extra_keys = extra.keys()
                 if "size" in extra_keys:
                     have[i].size = extra["size"]
@@ -53,6 +52,22 @@ def move_sprites(have,want):
                     have[i].speed = extra["speed"]
                 if "dx" in extra_keys:
                     have[i].dx = extra["dx"]
+                if "dy" in extra_keys:
+                    have[i].dy = extra["dy"]
+                if "move_direction" in extra_keys:
+                    have[i].move_direction = extra["move_direction"]
+                if "knockback" in extra_keys:
+                    have[i].knockback = extra["knockback"]
+                if "target" in extra_keys:
+                    have[i].target = extra["target"]
+                if "friction_coef" in extra_keys:
+                    have[i].friction_coef = extra["friction_coef"]
+                if "tx" in extra_keys:
+                    have[i].tx = extra["tx"]
+                if "ty" in extra_keys:
+                    have[i].ty = extra["ty"]
+
+
 
 def check_collisions_group(groupA, groupB, onHitA=None, onHitB=None):
     collisions = p.sprite.groupcollide(groupA, groupB, False, False)

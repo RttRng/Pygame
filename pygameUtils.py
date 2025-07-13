@@ -1,6 +1,7 @@
 import pygame as p
 import trig
 from control import c
+from typing import overload
 gAll = p.sprite.Group()
 gText = p.sprite.Group()
 gUI = p.sprite.Group()
@@ -75,6 +76,8 @@ class Object(p.sprite.Sprite):
         self.invincible_cooldown = 0
         self.last_hit = 0
         self.knockback = 10
+        self.skin = 0
+        self.skin2 = 0
     def add_speed(self):
         direction = self.direction
         acceleration = self.acceleration
@@ -121,8 +124,17 @@ class Object(p.sprite.Sprite):
 
         return new_angle % 360
 
+    def resize_automatic(self):
+        direction = self.direction
+        center = self.rect.center
+        self.scaled_image = p.transform.scale(self.original_image,(self.size,self.size))
+        self.rect = self.scaled_image.get_rect()
+        self.mask = p.mask.from_surface(self.scaled_image)
+        self.image = self.scaled_image
+        self.rect.center = center
+        self.direction = direction
 
-    def resize(self,size):
+    def resize(self,size:tuple[int,int]):
         direction = self.direction
         center = self.rect.center
         self.scaled_image = p.transform.scale(self.original_image,size)
@@ -132,13 +144,16 @@ class Object(p.sprite.Sprite):
         self.rect.center = center
         self.direction = direction
 
+
     def update(self):
         super().update()
 
     def draw(self,screen):
         try:
             if self.image and self.rect:
-                screen.blit(self.image, self.rect)
+                image = self.image.copy()
+                rect = self.rect.copy()
+                screen.blit(image, rect)
         except Exception as e:
             print(f"[ERROR] Chyba při vykreslování: {e}")
     def wrap(self):

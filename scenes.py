@@ -1,4 +1,6 @@
 import pygame as p
+
+import events
 from control import c
 from networkingLib import *
 from pygameLib import *
@@ -50,6 +52,8 @@ class SceneManager:
         for event in events:
             if event.type == p.QUIT:
                 c.running = False
+            if event.type == p.USEREVENT+1:
+                sfx.track_ended()
         self.active_scene.handle_events(events)
         for overlay in self.active_overlays.values():
             if overlay is not None:
@@ -79,11 +83,15 @@ class MainMenu(Scene):
         self.text1 = Text(c.screen, "", (10, 10))
         self.text2 = Text(c.screen, "", (10, 30))
         self.button1 = Button(100, 50, 55, 38, "Start", self.start_game, color=(0, 255, 0), tx=10, ty=10)
-        self.slider1 = Slider(100, 100, 100, 20, 0, 100, c.sfxvolume, tx=-70)
-        self.slider2 = Slider(100, 150, 100, 20, 0, 100, c.musicvolume, tx=-80)
-        self.slider3 = Slider(100, 200, 100, 20, 0, 1, c.loadout, tx=-20, round_to=0)
-        self.button2 = Button(100,250,50,38,"Host",self.start_host, color=(0, 0, 255), tx=10, ty=10)
-        self.button3 = Button(200,250,70,38,"Connect",self.start_client, color=(0, 0, 255), tx=10, ty=10)
+        self.slider1 = Slider(55, 100, 100, 20, 0, 100, c.sfxvolume, tx=110)
+        self.slider2 = Slider(55, 150, 100, 20, 0, 100, c.musicvolume, tx=110)
+        self.slider3 = Slider(55, 200, 100, 20, 0, 1, c.loadout, tx=110, round_to=0)
+        self.slider4 = Slider(55, 250, 100, 20, 0, 3, c.skin, tx=110, round_to=0)
+        self.button2 = Button(100,300,50,38,"Host",self.start_host, color=(0, 0, 255), tx=10, ty=10)
+        self.button3 = Button(200,300,70,38,"Connect",self.start_client, color=(0, 0, 255), tx=10, ty=10)
+        self.showcase = Showcase(300,260)
+        self.showcase2 = None
+        self.objects.add(self.showcase)
         self.objects.add(self.text1)
         self.objects.add(self.text2)
         self.objects.add(self.button1)
@@ -92,11 +100,13 @@ class MainMenu(Scene):
         self.objects.add(self.slider1)
         self.objects.add(self.slider2)
         self.objects.add(self.slider3)
+        self.objects.add(self.slider4)
         self.ready = False
         self.ready2 = True
         self.solo = True
         sfx.main_theme()
         self.msg2 = "Not Connected"
+        self.showcase.update_sprite(0)
     def set_ready2(self):
         if self.ready and self.ready2:
             sm.change_scene("GameScene")
@@ -127,13 +137,22 @@ class MainMenu(Scene):
         if self.slider1.get_release(): sfx.hit()
         c.musicvolume = self.slider2.get_value()
         c.loadout = self.slider3.get_value()
-
+        c.skin = self.slider4.get_value()
+        self.showcase.update_sprite(c.skin)
+        if self.showcase2 is not None:
+            self.showcase2.update_sprite(c.skin2)
+            if c.master:
+                sm.net.host.send("SKIN", {"Skin":c.skin})
+            else:
+                sm.net.client.send("SKIN", {"Skin":c.skin})
 
         sfx.apply_volume()
         for i in self.objects.sprites():
             i.update()
         self.slider1.text_object("SFX: " + str(c.sfxvolume))
         self.slider2.text_object("Music: " + str(c.musicvolume))
+        self.slider3.text_object("Loadout: " + str(["Sniper","Shotgun"][c.loadout]))
+        self.slider4.text_object("Skin: " + str(["Heart","Spade","Club","Diamond"][c.skin]))
     def draw(self, screen):
         screen.fill("black")
         super().draw(screen)
@@ -156,6 +175,8 @@ class MainMenu(Scene):
 
     def callback(self,isHost,type,data):
         if type == "CONNECT":
+            self.showcase2 = Showcase(350, 260)
+            self.objects.add(self.showcase2)
             print(f"[CALLBACK] Type: {type} Data: {data}")
             self.msg2 = "Connected"
             self.button1.text = "Not ready"
@@ -164,9 +185,13 @@ class MainMenu(Scene):
             self.solo = False
             if data["Name"] == "Client" and isHost:
                 sm.net.host.send("CONNECT", {"Name": "Host"})
-        if type == "READY":
+        if type == "READY" or type == "UPDATE":
             self.ready2 = True
             self.set_ready2()
+        if type == "SKIN":
+            self.showcase2.update_sprite(data["Skin"])
+            c.skin2 = data["Skin"]
+
 
 class GameScene(Scene):
     def __init__(self):
@@ -183,7 +208,7 @@ class GameScene(Scene):
         self.objects.add(self.text4)
         self.objects.add(self.text5)
         self.objects.add(self.text6)
-        self.player = Player(c.canvas_size[0] / 2, c.canvas_size[1] / 2)
+        self.player = Player(c.canvas_size[0] / 2, c.canvas_size[1] / 2,c.skin)
         self.objects.add(self.player)
         self.player2 = None
         if sm.net is not None:
@@ -201,12 +226,14 @@ class GameScene(Scene):
                     spawnx, spawny = trig.speeddeg_xy(
                         c.canvas_size[0] / 2 + c.canvas_size[1] / 2 + r.randint(0, 200),
                         r.randint(0, 360))
-                    Enemy(c.canvas_size[0] / 2 + spawnx, c.canvas_size[1] / 2 + spawny)
+                    AsteroidBig(c.canvas_size[0] / 2 + spawnx, c.canvas_size[1] / 2 + spawny,r.randint(50,c.canvas_size[0]-50),r.randint(50,c.canvas_size[1]-50))
             e.check_collisions_group(gPlayerProjectiles, gEnemies, e.kill, e.onHit)
             e.check_collisions_group(gPlayer, gEnemies, e.onHit, e.onHitSilent)
             e.check_collisions_group(gPlayer, gBoss, e.onHit, e.onHitSilent)
             e.check_collisions_group(gPlayer,gEnemyProjectiles,e.onHit,e.kill)
             e.check_collisions_group(gPlayerProjectiles, gBoss, e.kill, e.onHit)
+            e.check_collisions_group(gPlayer,gAsteroids,e.onHit,e.onHitSilent)
+            e.check_collisions_group(gPlayerProjectiles, gAsteroids, e.kill, e.onHit)
 
         gAll_copy = gAll.copy()
         try:
@@ -263,7 +290,7 @@ class GameScene(Scene):
                         JohnBoss(c.canvas_size[0] / 2, c.canvas_size[1] / 2)
 
         if sm.net is not None and self.player2 is None:
-            self.player2 = Player2(c.canvas_size[0], c.canvas_size[1])
+            self.player2 = Player2(c.canvas_size[0], c.canvas_size[1],c.skin2)
             self.objects.add(self.player2)
 
     def callback(self,isHost, type, data):
@@ -271,6 +298,8 @@ class GameScene(Scene):
             if type == "UPDATE":
                 self.recieve_update(type, data)
                 ev = data["Events"]
+                if ev["Player2Died"][0]:
+                    self.player2.kill()
                 if ev["Shooting"]:
                     for i in ev["ShootingData"]:
                         e.projectile(self.player2.rect.center, i[0], i[1],c.master)
@@ -279,6 +308,12 @@ class GameScene(Scene):
         else:
             if type == "UPDATE":
                 self.recieve_update(type, data)
+                ev = data["Events"]
+                if ev["Player2Died"][0]:
+                    self.player2.kill()
+                if ev["Player2Died"][1]:
+                    self.player.kill()
+
 
                 e.correct_sprites(gBoss.sprites(), data["Boss"]["JohnBoss"], JohnBoss)
                 e.move_sprites(gBoss.sprites(), data["Boss"]["JohnBoss"])
@@ -289,13 +324,18 @@ class GameScene(Scene):
                 e.move_sprites(gEnemies.sprites(), data["Enemies"])
                 e.correct_sprites(gPlayerProjectiles.sprites(), data["Projectiles"], Projectile)
                 e.move_sprites(gPlayerProjectiles.sprites(), data["Projectiles"])
+
+                e.correct_sprites(gAsteroids.sprites(), data["Asteroids"]["Big"], AsteroidBig)
+                e.move_sprites(gAsteroids.sprites(), data["Asteroids"]["Big"])
+
+                e.correct_sprites(gAsteroids.sprites(), data["Asteroids"]["Small"], AsteroidSmall)
+                e.move_sprites(gAsteroids.sprites(), data["Asteroids"]["Small"])
             else:
                 print(f"[CALLBACK CLIENT] Type: {type}")
     def recieve_update(self, type, data):
         print(f"[CALLBACK] Type: {type} Data: {data}")
         ev = data["Events"]
-        if ev["Player2Died"]:
-            self.player2.kill()
+
 
         px2, py2 = data["Player"][0:2]
         if px2 is None or py2 is None:
@@ -303,6 +343,7 @@ class GameScene(Scene):
                 self.player2.kill()
         else:
             self.player2.rect.center = data["Player"][0:2]
+            self.player2.direction = data["Player"][4]
             if not c.master:
                 self.player2.hp = data["Player"][2]
                 self.player.hp = data["Player"][3]
@@ -313,24 +354,29 @@ class GameScene(Scene):
             sfx.shoot()
     def send(self):
         try:
-            e.events["Player2Died"] =  not self.player.alive
+            e.events["Player2Died"] =  not self.player.alive, not self.player2.alive
             if self.player in gPlayer.sprites():
                 px, py = self.player.rect.center
                 hp = self.player.hp
                 hp2 = self.player2.hp
+                d = self.player.direction
             else:
-                px, py, hp, hp2 = None, None, 0, 0
-            data = {"Player": (px, py, hp, 0),
+                px, py, hp, hp2, d = None, None, 0, 0, 0
+            data = {"Player": (px, py, hp, 0, d),
                     "Sound_events": sound_events,
                     "Events": e.events}
             if sm.net.isHost:
                 data.update({
-                    "Player": (px, py, hp, hp2),
+                    "Player": (px, py, hp, hp2, d),
                     "Enemies": [i.rect.center for i in gEnemies.sprites()],
                     "Projectiles": [(i.rect.centerx,i.rect.centery,{"dmg":i.dmg}) for i in gPlayerProjectiles.sprites()],
                     "EProjectiles": [i.rect.center for i in gEnemyProjectiles.sprites()],
-                    "Boss": {a:[(i.rect.centerx,i.rect.centery,{"size":i.size})for i in filter(lambda x:x.type == a,[b for b in gBoss.sprites()])] for a in c.list_bosses}
+                    "Boss": {a:[(i.rect.centerx,i.rect.centery,{"size":i.size})for i in filter(lambda x:x.type == a,[b for b in gBoss.sprites()])] for a in c.list_bosses},
+                    "Asteroids": {a: [(i.rect.centerx, i.rect.centery, {"size": i.size, "hp": i.hp, "direction": i.direction,"move_direction": i.move_direction, "speed": i.speed}) for i in filter(lambda x: x.type == a, [b for b in gAsteroids.sprites()])] for a in c.list_asteroids},
+
                 })
+
+
                 sm.net.host.send("UPDATE", data)
                 sm.net.reset_events()
             else:

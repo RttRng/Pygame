@@ -14,6 +14,7 @@ gEnemies = p.sprite.Group()
 gPlayerProjectiles = p.sprite.Group()
 gEnemyProjectiles = p.sprite.Group()
 gBoss = p.sprite.Group()
+gAsteroids = p.sprite.Group()
 
 
 def switch(scene):
@@ -24,8 +25,9 @@ def switch(scene):
     c.reset = True
 
 class Player(Object):
-    def __init__(self,x,y):
-        super().__init__(x,y,"Player")
+    def __init__(self,x,y,skin):
+        sprite = ["Heart","Spade","Club","Diamond"][skin]
+        super().__init__(x,y,sprite)
         gPlayer.add(self)
         self.acceleration = 1
         self.rotation_speed = 5
@@ -38,7 +40,7 @@ class Player(Object):
         self.shoot_type = c.loadout
         self.alive = True
         self.invincible_cooldown = 1000
-        self.resize((20,20))
+        self.resize((25,25))
 
 
     def update(self):
@@ -79,18 +81,22 @@ class Player(Object):
         super().kill()
 
 class Player2(Object):
-    def __init__(self, x, y):
-        super().__init__(x, y, "Player2")
+    def __init__(self, x, y, skin):
+        sprite = ["Heart","Spade","Club","Diamond"][skin]
+        super().__init__(x, y, sprite)
         self.hp = 3
-        self.resize((20,20))
+        self.resize((25,25))
         gPlayer.add(self)
         self.invincible_cooldown = 1000
-
+    def update(self):
+        self.image = p.transform.rotate(self.scaled_image, -self.direction)
+        self.rect = self.image.get_rect(center=self.rect.center)
+        self.mask = p.mask.from_surface(self.image)
 class Projectile(Object):
     def __init__(self,x,y,direction=0,dmg = 1):
-        super().__init__(x,y,"Pellet")
+        super().__init__(x,y,"Bullet2")
         self.speed = 15
-        self.resize((5,5))
+        self.resize((15,15))
         self.dmg = dmg
         self.dx,self.dy = trig.speeddeg_xy(self.speed, direction)
         gPlayerProjectiles.add(self)
@@ -111,11 +117,72 @@ class Projectile(Object):
                 self.kill()
             except Exception as ex:
                 raise Warning(ex)
+class AsteroidBig(Object):
+    def __init__(self,x,y,tx=0,ty=0):
+        super().__init__(x,y,"BigBoi")
+        self.size = 70
+        gAsteroids.add(self)
+        self.knockback = 0
+        self.target = (tx, ty)
+        self.sx, self.sy = 0,0
+        self.friction_coef = 2
+        self.direction = r.randint(0,359)
+        self.move_direction = 0
+        self.hp = 10
+        self.type = "Big"
+        self.speed = r.randint(5,10)
+        self.image = p.transform.rotate(self.scaled_image, -self.direction)
+        self.rect = self.image.get_rect(center=self.rect.center)
+        self.mask = p.mask.from_surface(self.image)
+    def update(self):
+        super().update()
+        self.friction()
+        dx, dy = trig.speeddeg_xy(self.speed*int(trig.distance(self.rect.center,self.target)/200), trig.angledeg(self.rect.center, self.target))
+        self.dx += dx
+        self.dy += dy
+        self.rect.centerx += int(self.dx * c.delta_time)
+        self.rect.centery += int(self.dy * c.delta_time)
+        self.sx, self.sy = self.rect.centerx, self.rect.centery
+        self.resize_automatic()
+        self.image = p.transform.rotate(self.scaled_image, -self.direction)
+        self.rect = self.image.get_rect(center=self.rect.center)
+        self.mask = p.mask.from_surface(self.image)
+    def __del__(self):
+        for i in range(r.randint(2,5)):
+            AsteroidSmall(self.sx,self.sy)
+class AsteroidSmall(Object):
+    def __init__(self,x,y):
+        super().__init__(x,y,"SmolBoi")
+        self.size = 35
+
+        self.type = "Small"
+        self.knockback = 1
+        gAsteroids.add(self)
+        self.hp = 5
+        self.speed = r.randint(1,3)
+        self.direction = r.randint(0,359)
+        self.move_direction = r.randint(0,359)
+        self.image = p.transform.rotate(self.scaled_image, -self.direction)
+        self.friction_coef = 0.05
+        self.dx,self.dy = trig.speeddeg_xy(self.speed,self.move_direction)
+        self.rect = self.image.get_rect(center=self.rect.center)
+        self.mask = p.mask.from_surface(self.image)
+    def update(self):
+        self.friction()
+        super().update()
+        self.rect.centerx += self.dx * c.delta_time
+        self.rect.centery += self.dy * c.delta_time
+        if self.out_of_bounds():
+            self.kill()
+        self.resize_automatic()
+        self.image = p.transform.rotate(self.scaled_image, -self.direction)
+        self.rect = self.image.get_rect(center=self.rect.center)
+        self.mask = p.mask.from_surface(self.image)
 class Enemy(Object):
     def __init__(self,x,y):
         super().__init__(x,y,"Enemy")
         self.speed = 4
-        self.resize((20,20))
+        self.resize((30,30))
         self.dx,self.dy = 0,0
         gEnemies.add(self)
         self.hp = 3
@@ -137,9 +204,9 @@ class Enemy(Object):
                 pass
 class EnemyProjectile(Object):
     def __init__(self,x,y,direction=0):
-        super().__init__(x,y,"Pellet")
+        super().__init__(x,y,"Bullet1")
         self.speed = 50
-        self.resize((10,10))
+        self.resize((15,15))
         self.dx,self.dy = trig.speeddeg_xy(self.speed, direction)
         gEnemyProjectiles.add(self)
         self.lastx, self.lasty = -10,-10
@@ -263,8 +330,25 @@ class JohnBoss(Object):
                 for i in range(3):
                     EnemyProjectile(self.rect.centerx, self.rect.centery, self.direction+5* (r.random()*2-1) )
 
+class Showcase(Object):
+    def __init__(self,x,y):
+        super().__init__(x,y,"Heart")
+        self.ox, self.oy = x,y
+        self.direction = -90
+        self.image = p.transform.rotate(self.scaled_image, -self.direction)
+        self.rect = self.image.get_rect(center=self.rect.center)
+        self.resize((50,50))
 
 
+    def update_sprite(self, skin):
+        sprite = ["Heart", "Spade", "Club", "Diamond"][skin]
+        self.sprite = "Assets/Sprites/Png/" + sprite + ".png"
+        self.mask = p.mask.from_surface(p.image.load(self.sprite))
+        self.original_image = p.image.load(self.sprite)
+        self.resize((50, 50))
+        self.image = p.transform.rotate(self.scaled_image, -self.direction)
+        self.rect = self.image.get_rect(center=self.rect.center)
+        self.rect.center = self.ox, self.oy
 
 
 

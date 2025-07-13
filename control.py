@@ -31,14 +31,17 @@ class Controler:
         c.fps = 60
         c.net = False
         c.spawn = False
-        c.sfxvolume = 50
-        c.musicvolume = 50
+        c.sfxvolume = 10
+        c.musicvolume = 10
         c.FONT = p.font.SysFont("Arial", 18)
         c.PORT = 42069
         c.IP = "25.21.131.22"
 
+        c.skin = 0
+        c.skin2 = 0
         c.loadout = 0
-        c.list_bosses = ["JohnBoss","Enemy"]
+        c.list_bosses = ["JohnBoss"]
+        c.list_asteroids = ["Big","Small"]
         # c.IP = "192.168.0.150"
     def toggle_fullscreen(c):
         c.fullscreen = not c.fullscreen

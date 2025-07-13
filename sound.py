@@ -1,3 +1,4 @@
+import pygame
 import pygame as p
 import os
 import random as r
@@ -19,15 +20,27 @@ class Music:
     def __init__(self,name_and_type):
         self.path = "Assets/Music"
         self.file = self.path + "/" + name_and_type
+        self.loop = 0
+        self.start = 0.0
+        self.fade_ms = 0
     def __call__(self, *args, **kwargs):
         p.mixer.music.load(self.file)
-        p.mixer.music.play(loops=0, start=0.0, fade_ms=0)
+        p.mixer.music.play(loops=self.loop, start=self.start, fade_ms=self.fade_ms)
         p.mixer.music.set_volume(c.musicvolume/100)
 p.mixer.init()
 sound_events = {"shoot": False,"hit": False}
 hit = Sound("hit")
 shoot = Sound("shoot")
-main_theme = Music("TEST.mp3")
+intro = Music("Intro.mp3")
+loop = Music("Loop.mp3")
+loop.loop = -1
+
+pygame.mixer.music.set_endevent(pygame.USEREVENT+1)
+def track_ended():
+    loop()
+
+def main_theme():
+    intro()
 
 def apply_volume():
     p.mixer.music.set_volume(c.musicvolume / 100)
