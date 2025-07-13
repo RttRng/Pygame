@@ -13,7 +13,7 @@ def angledeg(xy1,xy2):
 def distance(xy1,xy2):
     x1,y1 = xy1
     x2,y2 = xy2
-    return m.sqrt((x2-x1)**2+(y2-y1)**2)
+    return m.sqrt(abs(x2-x1)**2+abs(y2-y1)**2)
 
 
 def get_nearest_sprite(source_sprite, group):
@@ -40,5 +40,6 @@ def get_rotation_direction(current, target):
     else:
         return 1   # rotate right
 
-
+def map(x, in_min, in_max, out_min, out_max):
+    return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min
 

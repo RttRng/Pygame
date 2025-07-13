@@ -1,8 +1,10 @@
 import pygame as p
 import trig
+from control import c
 gAll = p.sprite.Group()
 gText = p.sprite.Group()
-delta_time = 1
+gUI = p.sprite.Group()
+
 
 class Text(p.sprite.Sprite):
     def __init__(self,screen,msg,xy,color=(255,255,255),font="Arial",size=18,antialias=True):
@@ -13,15 +15,17 @@ class Text(p.sprite.Sprite):
         self.color = color
         self.x,self.y = xy
         self.antialias = antialias
-        self.screen = screen
-        self.text = self.font.render(self.msg, self.antialias, self.color)
+        self.text = self.font.render(str(self.msg), self.antialias, self.color)
         self.text_rect = self.text.get_rect(x=self.x, y=self.y)
     def __call__(self, msg):
         self.msg = str(msg)
         self.text = self.font.render(self.msg, self.antialias, self.color)
         self.text_rect = self.text.get_rect(x=self.x, y=self.y)
     def update(self):
-        self.screen.blit(self.text, self.text_rect)
+        pass
+    def draw(self, screen):
+        screen.blit(self.text, self.text_rect)
+
 class Mouse:
     def __init__(self):
         self.pos = (0,0)
@@ -30,6 +34,7 @@ class Mouse:
         self.released = (False,False,False)
     def update(self):
         self.pos = p.mouse.get_pos()
+        self.pos = (self.pos[0]/c.scale, self.pos[1]/c.scale)
         pressed_new = p.mouse.get_pressed()
         delta = (pressed_new[0] != self.pressed[0], pressed_new[1] != self.pressed[1],
                     pressed_new[2] != self.pressed[2])
@@ -54,10 +59,12 @@ class Object(p.sprite.Sprite):
         self.mask = p.mask.from_surface(p.image.load(self.sprite))
         self.image = p.image.load(self.sprite)
         self.original_image = self.image
+        self.scaled_image = self.image
         self.rect = self.image.get_rect()
         self.rect.center = self.x, self.y
         self.delta = 0
         self.hp = 0
+        self.dmg = 1
         self.desired_direction = 0
         self.direction = 0
         self.acceleration = 0
@@ -65,30 +72,41 @@ class Object(p.sprite.Sprite):
         self.dx,self.dy = 0,0
         self.friction_coef = 0.05
         self.delta_time = 1
-
+        self.invincible_cooldown = 0
+        self.last_hit = 0
+        self.knockback = 10
     def add_speed(self):
         direction = self.direction
         acceleration = self.acceleration
         dx, dy = trig.speeddeg_xy(acceleration - trig.current_speed(self) / 30, direction)
-        self.dx += dx * self.delta_time
-        self.dy += dy * self.delta_time
+        self.dx += dx * c.delta_time
+        self.dy += dy * c.delta_time
 
     def friction(self):
-        self.dx -= self.dx * self.friction_coef * self.delta_time
-        self.dy -= self.dy * self.friction_coef * self.delta_time
+        self.dx -= self.dx * self.friction_coef * c.delta_time
+        self.dy -= self.dy * self.friction_coef * c.delta_time
         if abs(self.dx) < self.friction_coef:
             self.dx = 0
         if abs(self.dy) < self.friction_coef:
             self.dy = 0
 
 
-    def hit(self,dmg):
-        self.hp -= dmg
-        if self.hp <= 0:
-            self.kill()
+    def hit(self,dmg,angle):
+        if dmg == -1:
+            if self.hp <= 0:
+                self.kill()
+            return
+        current_time = p.time.get_ticks()
+        x,y = trig.speeddeg_xy(self.knockback, angle)
+        self.rect.center = self.rect.centerx-x, self.rect.centery-y
+        if current_time - self.last_hit > self.invincible_cooldown:
+            self.last_hit = p.time.get_ticks()
+            self.hp -= dmg
+            if self.hp <= 0:
+                self.kill()
 
     def rotate_toward(self):
-        rotation_speed = self.rotation_speed * self.delta_time
+        rotation_speed = self.rotation_speed * c.delta_time
         if abs(self.direction - self.desired_direction) < rotation_speed:
             return self.desired_direction
 
@@ -105,30 +123,45 @@ class Object(p.sprite.Sprite):
 
 
     def resize(self,size):
-        self.image = p.transform.scale(self.image,size)
-        self.rect = self.image.get_rect()
-        self.mask = p.mask.from_surface(self.image)
-        self.rect.center = self.x, self.y
+        direction = self.direction
+        center = self.rect.center
+        self.scaled_image = p.transform.scale(self.original_image,size)
+        self.rect = self.scaled_image.get_rect()
+        self.mask = p.mask.from_surface(self.scaled_image)
+        self.image = self.scaled_image
+        self.rect.center = center
+        self.direction = direction
 
     def update(self):
         super().update()
-        self.delta_time = delta_time
 
     def draw(self,screen):
         try:
             if self.image and self.rect:
-                super().draw(screen)
+                screen.blit(self.image, self.rect)
         except Exception as e:
-            print(f"Chyba při vykreslování: {e}")
-    def wrap(self,wrap):
+            print(f"[ERROR] Chyba při vykreslování: {e}")
+    def wrap(self):
+        wrap = c.warp_bounds
+        wrapped = False
         if self.rect.centerx > wrap[2]:
             self.rect.centerx -= wrap[2]-10
+            wrapped = True
         if self.rect.centerx < wrap[0]:
             self.rect.centerx += wrap[2]-10
+            wrapped = True
         if self.rect.centery > wrap[3]:
             self.rect.centery -= wrap[3]-10
+            wrapped = True
         if self.rect.centery < wrap[1]:
             self.rect.centery += wrap[3]-10
-    def out_of_bounds(self,bounds):
+            wrapped = True
+        return wrapped
+    def out_of_bounds(self):
+        bounds = c.bounds
         if self.rect.centerx > bounds[2] or self.rect.centerx < bounds[0] or self.rect.centery > bounds[3] or self.rect.centery < bounds[1]:
-            self.kill()
+            return True
+        return False
+class Empty:
+    pass
+
