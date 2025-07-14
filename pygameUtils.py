@@ -1,7 +1,7 @@
 import pygame as p
 import trig
 from control import c
-from typing import overload
+import Assets
 gAll = p.sprite.Group()
 gText = p.sprite.Group()
 gUI = p.sprite.Group()

@@ -14,7 +14,7 @@ if __name__ == "__main__":
     sm.change_scene("MainMenu")
     while c.running:
         try:
-            sm.handle_events(p.event.get())
+            sm.handle_events(p.event.get())0
             sm.update()
             sm.draw(c.screen)
             c.clock.tick(c.fps)

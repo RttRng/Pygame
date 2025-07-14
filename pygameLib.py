@@ -69,7 +69,7 @@ class Player(Object):
                 sfx.shoot()
                 self.last_shot = p.time.get_ticks() + r.randint(-40, 40)
                 if self.shoot_type == 0:
-                    dmg = 20
+                    dmg = 5
                     e.projectile(self.rect.center, self.direction, dmg, c.master)
                 if self.shoot_type == 1:
                     dmg = 1
@@ -240,7 +240,7 @@ class JohnBoss(Object):
         self.size = 100
         gBoss.add(self)
         self.type = "JohnBoss"
-        self.hp = 20
+        self.hp = 100
         self.speed = 10
         self.dx,self.dy = 0,0
         self.nearest_player = None
@@ -275,7 +275,7 @@ class JohnBoss(Object):
                     self.direction += r.randint(-2,2)
                     self.rect.centerx += dx * c.delta_time
                     self.rect.centery += dy * c.delta_time
-                    if self.state_time > 1000:
+                    if self.state_time > 3000:
                         self.state = "transition_to_backshot"
                         self.state_new = True
                         return
@@ -298,7 +298,7 @@ class JohnBoss(Object):
                     self.rect.centery += self.speed * c.delta_time / 2
                     self.wrap()
                     self.shoot()
-                    if self.state_time > 1000:
+                    if self.state_time > 3000:
                         self.state = "transition_to_roam"
                         self.state_new = True
                         return
@@ -306,6 +306,7 @@ class JohnBoss(Object):
                     self.size -= 2
                     self.resize((self.size,self.size))
                     if self.size <= 20:
+                        self.size = 20
                         self.state = "backshot"
                         self.state_new = True
                     return
@@ -313,6 +314,7 @@ class JohnBoss(Object):
                     self.size += 2
                     self.resize((self.size,self.size))
                     if self.size >= 100:
+                        self.size = 100
                         self.state = "roam"
                         self.state_new = True
                     return
